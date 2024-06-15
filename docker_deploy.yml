@@ -1,0 +1,45 @@
+---
+- name: Deploy Apache Docker Container
+  hosts: all
+  become: true
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+    
+    - name: Ensure Docker is started
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull Apache Docker image
+      docker_image:
+        name: httpd
+        source: pull
+
+    - name: Run Apache container
+      docker_container:
+        name: apache_container
+        image: httpd
+        state: started
+        ports:
+          - "8080:80"
+        networks:
+          - name: apache_network
+            ipv4_address: 172.168.10.2
+
+    - name: Create a static HTML page
+      copy:
+        content: "<html><body><h1>Hello, World!</h1></body></html>"
+        dest: /usr/local/apache2/htdocs/index.html
+      delegate_to: localhost
+
+  handlers:
+    - name: Restart Apache container
+      docker_container:
+        name: apache_container
+        state: restarted
+
